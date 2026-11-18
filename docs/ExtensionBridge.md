@@ -44,7 +44,7 @@
 | `name` | `string` | プレイヤー名 |
 | `displayName` | `string` | 表示名 |
 | `team` | `string \| null` | チーム名（個人戦は `null`） |
-| `type` | `string` | プレイヤー種別（`HUMAN` など） |
+| `type` | `string` | プレイヤー種別（`"HUMAN"`, `"BOT"`, `"NATION"`） |
 | `isAlive` | `boolean` | 生存しているか |
 | `gold` | `number` | 所持ゴールド |
 | `troops` | `number` | 保有兵力 |
@@ -55,7 +55,7 @@
 | フィールド | 型 | 説明 |
 | :--- | :--- | :--- |
 | `id` | `number` | ユニット / 施設の一意 ID |
-| `type` | `string` | 種別（例: `SAMLauncher`, `City`, `Factory`, `Port`, `MissileSilo`, `DefensePost`, `Warship`, `TransportShip` 等） |
+| `type` | `string` | 施設・ユニット種別（下記の「種別・定数一覧」を参照） |
 | `x`, `y` | `number` | マップ上のワールド座標 |
 | `ownerSmallID` | `number` | 所有プレイヤーの `smallID` |
 | `troops` | `number` | ユニット兵力 |
@@ -71,7 +71,7 @@
 | フィールド | 型 | 説明 |
 | :--- | :--- | :--- |
 | `x`, `y` | `number` | タイル座標 |
-| `terrainType` | `number` | 地形種別コード |
+| `terrainType` | `number` | 地形種別コード（`0`: 平地, `1`: 高地, `2`: 山岳, `3`: 海, `4`: 通行不可） |
 | `isLand` | `boolean` | 陸地かどうか |
 | `isWater` | `boolean` | 水域かどうか |
 | `hasFallout` | `boolean` | 核による放射性降下物があるか |
@@ -150,6 +150,52 @@
   (document.head || document.documentElement).appendChild(script);
 })();
 ```
+
+### ブラウザへの読み込み手順（Chrome / Edge）
+1. 任意のフォルダ（例: `my-openfront-ext/`）を作成し、`manifest.json`・`injector.js`・`content.js` を配置する
+2. ブラウザで `chrome://extensions`（Edge の場合は `edge://extensions`）を開く
+3. 画面右上の **「デベロッパー モード」** をオンにする
+4. **「パッケージ化されていない拡張機能を読み込む」** をクリックし、作成したフォルダを選択する
+5. `https://openfront.dk-core.com/`（または `http://localhost:9000/`）をリロードしてゲームを開始する
+   - コードを変更した場合は、拡張機能一覧カードの **更新アイコン（↻）** を押してからゲームページをリロードしてください
+
+---
+
+## 3.5 種別・定数一覧（フィルタ条件用）
+
+### `units[].type`（`UnitType`）
+| カテゴリ | 値（正確な文字列） | 説明 |
+| :--- | :--- | :--- |
+| **施設** | `"City"` | 都市 |
+| | `"Factory"` | 工場 |
+| | `"Port"` | 港 |
+| | `"Defense Post"` | 防衛拠点 |
+| | `"SAM Launcher"` | SAM タレット（迎撃ミサイル発射機） |
+| | `"Missile Silo"` | ミサイルサイロ |
+| **ユニット・艦船** | `"Transport"` | 輸送船 |
+| | `"Warship"` | 軍艦 |
+| | `"Trade Ship"` | 貿易船 |
+| | `"Train"` | 列車 |
+| | `"Shell"` | 砲弾 |
+| | `"SAMMissile"` | 発射中の SAM 迎撃ミサイル |
+| **核兵器** | `"Atom Bomb"` | 原子爆弾 |
+| | `"Hydrogen Bomb"` | 水素爆弾 |
+| | `"MIRV"` | 多弾頭ミサイル（本体） |
+| | `"MIRV Warhead"` | MIRV 弾頭 |
+
+### `terrainType`（`TerrainType`）
+| 値 | 名称 | 説明 |
+| ---: | :--- | :--- |
+| `0` | `Plains` | 平地 |
+| `1` | `Highland` | 高地 |
+| `2` | `Mountain` | 山岳 |
+| `3` | `Ocean` | 海・水域 |
+| `4` | `Impassable` | 通行不可領域 |
+
+### `players[].type`（`PlayerType`）
+- `"HUMAN"`: 人間プレイヤー
+- `"BOT"`: ゲーム内 Bot
+- `"NATION"`: 国家 AI
 
 ---
 
