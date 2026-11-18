@@ -12,6 +12,85 @@ import { ServerEnv } from "./ServerEnv";
 
 const log = logger.child({ component: "Archive" });
 
+async function sendGameResultToDiscordBot(gameRecord: GameRecord) {
+  try {
+    const botUrl =
+      process.env.BOT_API_URL ?? "http://openfront-bot:8080/api/game-result";
+    let winnerName = "不明";
+    let winnerClientID = "";
+    let isNpcWinner = false;
+
+    if (gameRecord.info.winner) {
+      const [kind, id] = gameRecord.info.winner;
+      if (kind === "player") {
+        winnerClientID = id;
+        const winnerPlayer = gameRecord.info.players.find(
+          (p) => p.clientID === id,
+        );
+        if (winnerPlayer) {
+          // ボット（persistentIDが無いか、またはボット名）の場合は一律NPC扱い
+          if (
+            !winnerPlayer.persistentID ||
+            winnerPlayer.username.startsWith("Bot ")
+          ) {
+            winnerName = "NPC";
+            isNpcWinner = true;
+          } else {
+            winnerName = winnerPlayer.username;
+          }
+        }
+      } else if (kind === "team") {
+        if (id === "Bot" || id.toLowerCase().includes("bot")) {
+          winnerName = "NPC";
+          isNpcWinner = true;
+        } else {
+          winnerName = `チーム ${id}`;
+        }
+      } else if (kind === "nation") {
+        winnerName = "NPC"; // 国家AI・ボット国家の勝利は一律「NPC」
+        isNpcWinner = true;
+      }
+    }
+
+    const payload = {
+      gameID: gameRecord.info.gameID,
+      winner: winnerName,
+      winnerClientID: isNpcWinner ? "NPC" : winnerClientID,
+      isNpcWinner,
+      gameMode: gameRecord.info.config?.gameMode ?? "FFA",
+      durationSeconds: Math.round(gameRecord.info.duration ?? 0),
+      players: gameRecord.info.players.map((p) => ({
+        clientID: p.clientID,
+        username:
+          !p.persistentID || p.username.startsWith("Bot ") ? "NPC" : p.username,
+        isWinner: isNpcWinner ? false : p.clientID === winnerClientID,
+        stats: p.stats,
+      })),
+    };
+
+    const res = await fetch(botUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload, replacer),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (res.ok) {
+      log.info(`game result successfully forwarded to Discord bot`, {
+        gameID: gameRecord.info.gameID,
+      });
+    } else {
+      log.warn(`Discord bot responded with status ${res.status}`, {
+        gameID: gameRecord.info.gameID,
+      });
+    }
+  } catch (err) {
+    log.warn(`could not send game result to Discord bot: ${err}`, {
+      gameID: gameRecord.info.gameID,
+    });
+  }
+}
+
 // Waits before each retry of a failed archive POST. Without a retry, a 5xx or
 // network blip during an API incident loses the game's stats for every player.
 // The API's duplicate check isn't atomic, so a retry that overlaps a still-
@@ -32,6 +111,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const withJitter = (ms: number) => ms + Math.floor(Math.random() * ms * 0.25);
 
 export async function archive(gameRecord: GameRecord) {
+  void sendGameResultToDiscordBot(gameRecord);
+
   let gameID: GameID | undefined;
   let request: RequestInit;
   let url: string;

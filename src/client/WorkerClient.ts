@@ -149,6 +149,9 @@ export class WorkerClient {
     }
     const worker = await created;
     this.worker = worker;
+    worker.addEventListener("error", (err) => {
+      console.error("Worker error event:", err);
+    });
     worker.addEventListener("message", this.handleWorkerMessage.bind(this));
 
     return new Promise((resolve, reject) => {
