@@ -1,3 +1,5 @@
+import { Cell } from "@openfront/engine-api/game/GameTypes";
+import type { TransformHandler } from "./TransformHandler";
 import type { GameView, PlayerView } from "./view";
 
 export interface BridgePlayerInfo {
@@ -21,6 +23,8 @@ export interface BridgeUnitInfo {
   y: number;
   ownerSmallID: number;
   troops: number;
+  level: number;
+  isInCooldown: boolean;
   isActive: boolean;
 }
 
@@ -40,6 +44,17 @@ export interface BridgeOwnerGrid {
   step: number;
   owners: number[];
   terrain: number[];
+}
+
+export interface BridgeCameraInfo {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+export interface BridgePoint {
+  x: number;
+  y: number;
 }
 
 export interface BridgeStateSnapshot {
@@ -62,9 +77,13 @@ export interface OpenFrontExtensionBridge {
   getState: () => BridgeStateSnapshot | null;
   getTileInfo: (x: number, y: number) => BridgeTileInfo | null;
   getOwnerGrid: (step?: number) => BridgeOwnerGrid | null;
+  getCamera: () => BridgeCameraInfo | null;
+  worldToScreen: (x: number, y: number) => BridgePoint | null;
+  screenToWorld: (screenX: number, screenY: number) => BridgePoint | null;
 }
 
 let activeGameView: GameView | null = null;
+let activeTransformHandler: TransformHandler | null = null;
 
 function serializePlayer(p: PlayerView): BridgePlayerInfo {
   return {
@@ -84,7 +103,7 @@ function serializePlayer(p: PlayerView): BridgePlayerInfo {
 
 function buildBridge(): OpenFrontExtensionBridge {
   return {
-    version: 1,
+    version: 2,
     isReady: () => activeGameView !== null,
     getState: () => {
       const gv = activeGameView;
@@ -110,6 +129,8 @@ function buildBridge(): OpenFrontExtensionBridge {
             y: gv.y(tile),
             ownerSmallID: u.owner()?.smallID?.() ?? 0,
             troops: u.troops(),
+            level: u.level(),
+            isInCooldown: u.isInCooldown(),
             isActive: u.isActive(),
           };
         }),
@@ -155,6 +176,28 @@ function buildBridge(): OpenFrontExtensionBridge {
       }
       return { width: gw, height: gh, step: s, owners, terrain };
     },
+    getCamera: () => {
+      const th = activeTransformHandler;
+      if (!th) return null;
+      return {
+        scale: th.scale,
+        offsetX: th.offsetX,
+        offsetY: th.offsetY,
+      };
+    },
+    worldToScreen: (x: number, y: number) => {
+      const th = activeTransformHandler;
+      if (!th) return null;
+      return th.worldToScreenCoordinates(
+        new Cell(Math.floor(x), Math.floor(y)),
+      );
+    },
+    screenToWorld: (screenX: number, screenY: number) => {
+      const th = activeTransformHandler;
+      if (!th) return null;
+      const cell = th.screenToWorldCoordinates(screenX, screenY);
+      return { x: cell.x, y: cell.y };
+    },
   };
 }
 
@@ -162,8 +205,12 @@ function buildBridge(): OpenFrontExtensionBridge {
  * Registers a read-only Pull-based bridge on window.__openfrontBridge.
  * Zero runtime and network overhead when no extension reads from it.
  */
-export function registerExtensionBridge(gameView: GameView): void {
+export function registerExtensionBridge(
+  gameView: GameView,
+  transformHandler?: TransformHandler,
+): void {
   activeGameView = gameView;
+  activeTransformHandler = transformHandler ?? null;
   const win = window as unknown as {
     __openfrontBridge?: OpenFrontExtensionBridge;
   };
@@ -172,4 +219,5 @@ export function registerExtensionBridge(gameView: GameView): void {
 
 export function unregisterExtensionBridge(): void {
   activeGameView = null;
+  activeTransformHandler = null;
 }

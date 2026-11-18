@@ -769,7 +769,6 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.players,
     lobbyConfig.snapshot !== undefined,
   );
-  registerExtensionBridge(gameView);
 
   // Transparent fullscreen overlay used purely as the pointer-event /
   // bounding-rect target for InputHandler + TransformHandler. The actual
@@ -915,6 +914,7 @@ async function createClientGame(
       mapLayerController,
       lobbyConfig.gameStartInfo.visibleAt,
     );
+    registerExtensionBridge(gameView, gameRenderer.transformHandler);
 
     const metrics = new GameMetrics(lobbyConfig.gameID, clientID);
     const health = new GameHealth();
