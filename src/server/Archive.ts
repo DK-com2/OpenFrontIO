@@ -66,13 +66,14 @@ async function sendGameResultToDiscordBot(gameRecord: GameRecord) {
         isWinner: isNpcWinner ? false : p.clientID === winnerClientID,
         stats: p.stats,
       })),
+      gameRecord,
     };
 
     const res = await fetch(botUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload, replacer),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (res.ok) {

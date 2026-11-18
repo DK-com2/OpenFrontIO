@@ -42,7 +42,12 @@ export async function fetchReplayRecord(
     handedOver = null;
     return { kind: "record", record };
   }
-  const apiBase = opts.apiBase ?? getApiBase();
+  const apiBase =
+    opts.apiBase ??
+    (typeof window !== "undefined" &&
+    window.location.hostname === "openfront.dk-core.com"
+      ? "/dashboard-api"
+      : getApiBase());
   const ownCommit = opts.ownCommit ?? ClientEnv.gitCommit();
   const fetchFn = opts.fetchFn ?? fetch;
   let res: Response;

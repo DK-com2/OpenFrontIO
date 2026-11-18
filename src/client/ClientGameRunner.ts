@@ -103,6 +103,10 @@ import {
 } from "./UserSettings";
 import { createCanvas } from "./Utils";
 import { GameView, PlayerView } from "./view";
+import {
+  registerExtensionBridge,
+  unregisterExtensionBridge,
+} from "./ExtensionBridge";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { WorkerClient } from "./WorkerClient";
 
@@ -765,6 +769,7 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.players,
     lobbyConfig.snapshot !== undefined,
   );
+  registerExtensionBridge(gameView);
 
   // Transparent fullscreen overlay used purely as the pointer-event /
   // bounding-rect target for InputHandler + TransformHandler. The actual
@@ -1336,6 +1341,7 @@ export class ClientGameRunner {
   // releaseTabAttention is false when disposing a runner for a lobby that was
   // already left: its flash (if any) isn't this runner's to clear anymore.
   public stop(releaseTabAttention: boolean = true) {
+    unregisterExtensionBridge();
     if (releaseTabAttention) tabAttention.release();
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
