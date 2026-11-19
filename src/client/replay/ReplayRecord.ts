@@ -45,7 +45,9 @@ export async function fetchReplayRecord(
   const apiBase =
     opts.apiBase ??
     (typeof window !== "undefined" &&
-    window.location.hostname === "openfront.dk-core.com"
+    window.location.hostname !== "" &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
       ? "/dashboard-api"
       : getApiBase());
   const ownCommit = opts.ownCommit ?? ClientEnv.gitCommit();
@@ -73,8 +75,13 @@ export async function fetchReplayRecord(
   const parsed = GameRecordSchema.safeParse(raw);
   if (!parsed.success) return { kind: "other_build" };
   const record = parsed.data;
-  // DEV builds replay anything, like the client-side replay.
-  if (ownCommit !== "DEV" && record.gitCommit !== ownCommit) {
+  // DEV/self-hosted builds replay DEV records without strict commit hash match.
+  if (
+    ownCommit !== "DEV" &&
+    ownCommit !== "unknown" &&
+    record.gitCommit !== "DEV" &&
+    record.gitCommit !== ownCommit
+  ) {
     return { kind: "other_build" };
   }
   return { kind: "record", record };
